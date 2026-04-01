@@ -1,4 +1,4 @@
-import io #binary file → readable buffer
+import io  # binary file → readable buffer
 import logging
 
 import pandas as pd
@@ -23,52 +23,28 @@ def _parse_to_dataframe(content: bytes, file_type: FileType) -> pd.DataFrame:
     elif file_type == FileType.xlsx:
         # Load without header first to find the real start of the table
         df_temp = pd.read_excel(buf, header=None, engine="openpyxl")
-        
+
         # Find the first row that has at least 3 non-null values (typical for a table)
         header_idx = 0
         for i, row in df_temp.iterrows():
             if row.count() >= 3:
                 header_idx = i
                 break
-        
+
         # Reload with the detected header row
         buf.seek(0)
         return pd.read_excel(buf, header=header_idx, engine="openpyxl")
-        
+
     elif file_type == FileType.json:
         return pd.read_json(buf)
 
     raise ValueError(f"Unsupported file type: {file_type}")
 
 
-# def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     B2-B4: Apply cleaning logic: normalization, null handling, and deduplication.
-#     """
-#     # B2: Column normalisation
-#     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_", regex=False)
-
-#     # B3: Null handling
-#     df = df.dropna(how="all")  # Rows
-#     df = df.dropna(axis=1, how="all")  # Columns
-
-#     # B4: Deduplication
-#     df = df.drop_duplicates().reset_index(drop=True)
-
-#     # Whitespace stripping from string values
-#     df = df.apply(lambda col: col.str.strip() if col.dtype == "object" else col)
-
-#     return df
-
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     # Normalize columns
-    df.columns = (
-        df.columns
-        .str.strip()
-        .str.lower()
-        .str.replace(" ", "_", regex=False)
-    )
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_", regex=False)
 
     # Strip whitespace first
     df = df.apply(lambda col: col.str.strip() if col.dtype == "object" else col)
@@ -84,18 +60,19 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     # Remove duplicates
     df = df.drop_duplicates().reset_index(drop=True)
-    
-    # CRITICAL: Prevent DuckDB ConversionException on mixed-type columns.
+
+    #  Prevent DuckDB ConversionException on mixed-type columns.
     # If a column has mostly numbers but some strings ('No'), DuckDB might incorrectly guess 'DOUBLE'.
-    # We strictly cast any remaining 'object' column to 'string' while preserving actual nulls.
+    #  strictly cast any remaining 'object' column to 'string' while preserving actual nulls.
     for col in df.columns:
-        if df[col].dtype == 'object':
+        if df[col].dtype == "object":
             # Convert non-null values to string to enforce type consistency safely
             df[col] = df[col].apply(lambda x: str(x) if pd.notnull(x) else x)
             # Standardize column to pandas string extension type
-            df[col] = df[col].astype('string')
+            df[col] = df[col].astype("string")
 
     return df
+
 
 def detect_file_type(filename: str) -> FileType:
     """Detect file type based on extension."""
@@ -110,11 +87,13 @@ def detect_file_type(filename: str) -> FileType:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
 
 
-def save_raw_file(db: Session, file_url: str, filename: str, company_id: int) -> RawUpload:
+def save_raw_file(
+    db: Session, file_url: str, filename: str, company_id: int
+) -> RawUpload:
     """Save the raw file metadata to PostgreSQL and stop (ETL deferred)."""
     try:
         file_type = detect_file_type(filename)
-        
+
         raw_upload = RawUpload(
             filename=filename,
             file_type=file_type,
@@ -132,4 +111,6 @@ def save_raw_file(db: Session, file_url: str, filename: str, company_id: int) ->
     except Exception as e:
         db.rollback()
         logger.error(f"Error saving file details to Postgres: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to save file metadata: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save file metadata: {str(e)}"
+        )

@@ -1,22 +1,21 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine,text
-from sqlalchemy.orm import declarative_base, sessionmaker
 from fastapi import Request
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(
-    DATABASE_URL,
-    pool_size=5,
-    max_overflow=10,
-    pool_recycle=3600,
-    pool_pre_ping=True
+    DATABASE_URL, pool_size=5, max_overflow=10, pool_recycle=3600, pool_pre_ping=True
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+)
 
 Base = declarative_base()
 
@@ -24,6 +23,7 @@ Base = declarative_base()
 # =========================================================================
 # SAAS DATABASE & MULTI-TENANCY CORE
 # =========================================================================
+
 
 def get_db(request: Request):
     """
@@ -45,6 +45,7 @@ def get_db(request: Request):
         # Standard flow: Use the already scoped session from middleware.
         yield db
 
+
 def set_tenant_schema(db, tenant: str):
     """
     POSTGRES SCHEMA SWITCHING:
@@ -56,4 +57,3 @@ def set_tenant_schema(db, tenant: str):
         tenant = "public"
 
     db.execute(text(f"SET search_path TO {tenant}, public"))
-

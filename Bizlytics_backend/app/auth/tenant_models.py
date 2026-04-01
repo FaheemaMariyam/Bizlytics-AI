@@ -1,12 +1,16 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Integer, String, Enum
+
+from sqlalchemy import Column, DateTime, Enum, Integer, String
+
 from app.tenant.models import TenantBase
+
 
 class HRStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+
 
 class HRAccount(TenantBase):
     __tablename__ = "hr_accounts"

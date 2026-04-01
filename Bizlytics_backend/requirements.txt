@@ -183,7 +183,7 @@
 # duckdb==1.1.3
 fastapi==0.110.0
 uvicorn==0.27.1
-SQLAlchemy==2.0.46
+SQLAlchemy<2.0.36
 psycopg2-binary==2.9.11
 python-dotenv==1.2.1
 python-multipart==0.0.20
@@ -195,6 +195,8 @@ passlib[bcrypt]==1.7.4
 pandas==2.2.2
 openpyxl==3.1.2
 duckdb==1.1.3
+filelock==3.13.1  #  for cross-container database locking
+
 
 celery==5.4.0
 redis==5.0.0
@@ -207,5 +209,5 @@ email-validator==2.1.0
 # AI & Agentic Implementation
 langgraph==0.2.39
 langchain-google-genai==2.0.1
-langchain-core==0.3.15
+langchain-core>=0.3.27
 langchain-community==0.3.5

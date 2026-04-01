@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status,Request
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ security = HTTPBearer()
 
 
 from app.database import get_db
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -33,6 +34,7 @@ def get_current_user(
         )
 
     return user
+
 
 def require_role(*allowed_roles: str):
     """Factory that creates a dependency to enforce role-based access."""

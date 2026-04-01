@@ -1,13 +1,15 @@
-import sys
 import os
+import sys
 
 # Add the project root to sys.path
 sys.path.append(os.getcwd())
 
-from app.database import SessionLocal
-from app.auth.service import login_user
-from app.auth.schemas import LoginRequest
 import traceback
+
+from app.auth.schemas import LoginRequest
+from app.auth.service import login_user
+from app.database import SessionLocal
+
 
 def test_login(email, password):
     print(f"Testing login for {email}...")
@@ -21,6 +23,7 @@ def test_login(email, password):
         traceback.print_exc()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     # Test with admin

@@ -4,14 +4,16 @@
     "*.copilotmd": "vscode.markdown.preview.editor",
     "*.parquet": "duckdb.dataFileViewer",
     "*.csv": "duckdb.dataFileViewer",
-    "*.tsv": "duckdb.dataFileViewer"
+    "*.tsv": "duckdb.dataFileViewer",
+    "*.xlsx": "duckdb.dataFileViewer"
   },
   "duckdb.databases": [
     {
       "alias": "bizlytics",
       "type": "file",
       "path": "c:\\Users\\acer\\Desktop\\Bizlytics Ai\\Bizlytics_backend\\data\\bizlytics.db",
-      "attached": false
+      "readOnly": true,
+      "attached": true
     }
   ],
   "duckdb.defaultDatabase": "bizlytics"

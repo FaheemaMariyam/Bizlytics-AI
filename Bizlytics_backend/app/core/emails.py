@@ -1,7 +1,7 @@
 import smtplib
 from email.mime.text import MIMEText
 
-from app.core.config import SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD
+from app.core.config import SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USERNAME
 
 
 def send_email(to: str, subject: str, body: str):
