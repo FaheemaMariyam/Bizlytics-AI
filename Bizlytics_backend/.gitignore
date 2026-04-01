@@ -15,3 +15,8 @@ venv/
 
 #requirements in dev time
 .requirements.txt
+
+#database files
+*.db
+*.db.lock
+Bizlytics_backend/data/
