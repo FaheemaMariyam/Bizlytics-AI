@@ -4,10 +4,18 @@ from sqlalchemy.orm import Session
 from app.auth import service
 from app.auth.dependencies import get_current_user
 from app.auth.models import Company, User, UserRole
-from app.auth.schemas import (CompanyRegisterRequest, HRRegisterRequest,
-                              LoginRequest, MessageResponse,
-                              RefreshTokenRequest, TokenResponse, UserResponse,
-                              ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest)
+from app.auth.schemas import (
+    ChangePasswordRequest,
+    CompanyRegisterRequest,
+    ForgotPasswordRequest,
+    HRRegisterRequest,
+    LoginRequest,
+    MessageResponse,
+    RefreshTokenRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+    UserResponse,
+)
 from app.database import get_db
 
 router = APIRouter()
@@ -122,17 +130,20 @@ def get_me(current_user: User = Depends(get_current_user)):
     """Get current user profile. Requires JWT."""
     return current_user
 
+
 @router.post("/change-password")
 def change_password(
     data: ChangePasswordRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     return service.change_password(db, current_user, data)
+
 
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     return service.forgot_password(db, data)
+
 
 @router.post("/reset-password", response_model=MessageResponse)
 def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):

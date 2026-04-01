@@ -1,8 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Integer,
-                        String)
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -46,7 +45,7 @@ class Company(Base):
     status = Column(Enum(CompanyStatus), default=CompanyStatus.pending)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    hr_accounts = relationship("HRAccount", back_populates="company")
+    # hr_accounts moved to tenant schema
 
 
 # ----------------------------
@@ -68,25 +67,7 @@ class User(Base):
     refresh_tokens = relationship("RefreshToken", back_populates="user")
 
 
-# ----------------------------
-# HR ACCOUNTS (PUBLIC SCHEMA — linked to company via FK)
-# ----------------------------
-
-
-class HRAccount(Base):
-    __tablename__ = "hr_accounts"
-    __table_args__ = {"schema": "public"}
-
-    id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(
-        Integer, ForeignKey("public.companies.id", ondelete="CASCADE"), nullable=False
-    )
-    email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    status = Column(Enum(HRStatus), default=HRStatus.pending)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    company = relationship("Company", back_populates="hr_accounts")
+# HR ACCOUNTS moved to tenant schema (app/auth/tenant_models.py)
 
 
 # ----------------------------

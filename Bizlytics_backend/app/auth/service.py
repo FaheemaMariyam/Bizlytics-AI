@@ -7,20 +7,30 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import repository as repo
-from app.auth.models import Company, HRAccount, HRStatus, UserRole ,User
-from app.auth.models import CompanyStatus
-from app.auth.schemas import (CompanyRegisterRequest, HRRegisterRequest,
-                              LoginRequest, MessageResponse,
-                              RefreshTokenRequest, TokenResponse,
-                              ForgotPasswordRequest , ResetPasswordRequest,
-                              ChangePasswordRequest)
-from app.core.config import REFRESH_TOKEN_EXPIRE_DAYS, FRONTEND_URL
-from app.core.jwt_handler import (create_access_token, create_refresh_token,
-                                  decode_token,
-                                  create_password_reset_token)
+from app.auth.models import Company, CompanyStatus, User, UserRole
+from app.auth.schemas import (
+    ChangePasswordRequest,
+    CompanyRegisterRequest,
+    ForgotPasswordRequest,
+    HRRegisterRequest,
+    LoginRequest,
+    MessageResponse,
+    RefreshTokenRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+)
+from app.auth.tenant_models import HRAccount, HRStatus
+from app.core.config import FRONTEND_URL, REFRESH_TOKEN_EXPIRE_DAYS
+from app.core.emails import send_email
+from app.core.jwt_handler import (
+    create_access_token,
+    create_password_reset_token,
+    create_refresh_token,
+    decode_token,
+)
 from app.core.security import hash_password, verify_password
 from app.core.tenant import create_tenant_schema
-from app.core.emails import send_email
+
 logger = logging.getLogger(__name__)
 
 
@@ -29,31 +39,33 @@ logger = logging.getLogger(__name__)
 # ============================================
 
 
+# =========================================================================
+# SAAS HR REGISTRATION (Sub-User Creation)
+# =========================================================================
 def register_hr(db: Session, data: HRRegisterRequest) -> MessageResponse:
     """
-    Register HR account with status=pending. Company must approve before HR can login.
+    1. SCOPING: Look up which company (tenant) this HR wants to join.
+    2. AUTH: Create a global login record in 'public.users'.
+    3. TENANT STORAGE: Switch database scope to the company's private schema
+       and create the detailed HR profile inside it.
     """
     data.email = data.email.lower().strip()
     data.company_email = data.company_email.lower().strip()
 
-    # Check if HR email already registered
     existing_user = repo.get_user_by_email(db, data.email)
-    existing_hr = db.query(HRAccount).filter(HRAccount.email == data.email).first()
 
-    if existing_user or existing_hr:
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An account with this email already exists.",
         )
 
-    # Verify company exists and is approved
+    # Security: Ensure the target company exists and is approved
     company = repo.get_company_by_email(db, data.company_email)
     if not company:
         raise HTTPException(
             status_code=404, detail="Company not found with this email."
         )
-
-    # from app.auth.models import CompanyStatus
 
     if company.status != CompanyStatus.approved:
         raise HTTPException(
@@ -64,26 +76,26 @@ def register_hr(db: Session, data: HRRegisterRequest) -> MessageResponse:
     try:
         hashed = hash_password(data.password)
 
-        # Create user record (role=hr)
+        # CREATE GLOBAL ACCOUNT (For Login)
         repo.create_user(
             db=db,
             email=data.email,
             password_hash=hashed,
             role=UserRole.hr,
-            schema_name=company.schema_name,
+            schema_name=company.schema_name,  # Critical: Link user to their company's schema
         )
 
-        # Create HR account (status=pending)
+        # CREATE TENANT-SPECIFIC ACCOUNT (Inside the company room)
+        # Note: We physically switch the Postgres scope to the company's schema here.
+        from sqlalchemy import text
+
+        db.execute(text(f"SET search_path TO {company.schema_name}, public"))
+
         repo.create_hr_account(
-            db=db, company_id=company.id, email=data.email, password_hash=hashed,
+            db=db, email=data.email, password_hash=hashed,
         )
 
         db.commit()
-        logger.info(
-            "HR registration request submitted: %s -> company %s",
-            data.email,
-            data.company_email,
-        )
         return MessageResponse(
             message="Registration submitted! Your account is pending company approval."
         )
@@ -105,13 +117,7 @@ def register_hr(db: Session, data: HRRegisterRequest) -> MessageResponse:
 
 def get_pending_hrs(db: Session, company_id: int) -> List[dict]:
     """Get all pending HR registrations for a company."""
-    hrs = (
-        db.query(HRAccount)
-        .filter(
-            HRAccount.company_id == company_id, HRAccount.status == HRStatus.pending
-        )
-        .all()
-    )
+    hrs = db.query(HRAccount).filter(HRAccount.status == HRStatus.pending).all()
     return [
         {
             "id": hr.id,
@@ -125,11 +131,9 @@ def get_pending_hrs(db: Session, company_id: int) -> List[dict]:
 
 def approve_hr(db: Session, company_id: int, hr_id: int) -> MessageResponse:
     """Approve a pending HR registration."""
-    hr = (
-        db.query(HRAccount)
-        .filter(HRAccount.id == hr_id, HRAccount.company_id == company_id)
-        .first()
-    )
+    # Note: Middleware has already switched to the correct tenant schema
+    hr = db.query(HRAccount).filter(HRAccount.id == hr_id).first()
+
     if not hr:
         raise HTTPException(status_code=404, detail="HR account not found")
 
@@ -148,11 +152,9 @@ def approve_hr(db: Session, company_id: int, hr_id: int) -> MessageResponse:
 
 def reject_hr(db: Session, company_id: int, hr_id: int) -> MessageResponse:
     """Reject a pending HR registration."""
-    hr = (
-        db.query(HRAccount)
-        .filter(HRAccount.id == hr_id, HRAccount.company_id == company_id)
-        .first()
-    )
+    # Note: Middleware has already switched to the correct tenant schema
+    hr = db.query(HRAccount).filter(HRAccount.id == hr_id).first()
+
     if not hr:
         raise HTTPException(status_code=404, detail="HR account not found")
 
@@ -190,20 +192,30 @@ def login_user(db: Session, data: LoginRequest) -> TokenResponse:
             detail="Invalid email or password",
         )
 
-    # If HR, check company approval status
+    # If HR, check company approval status in their assigned schema
     if user.role == UserRole.hr:
-        hr_account = db.query(HRAccount).filter(HRAccount.email == user.email).first()
-        if hr_account:
-            if hr_account.status == HRStatus.pending:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your HR registration is pending company approval.",
-                )
-            elif hr_account.status == HRStatus.rejected:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your HR registration was rejected by the company.",
-                )
+        if user.schema_name:
+            from sqlalchemy import text
+
+            db.execute(text(f"SET search_path TO {user.schema_name}, public"))
+
+            hr_account = (
+                db.query(HRAccount).filter(HRAccount.email == user.email).first()
+            )
+            if hr_account:
+                if hr_account.status == HRStatus.pending:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Your HR registration is pending company approval.",
+                    )
+                elif hr_account.status == HRStatus.rejected:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Your HR registration was rejected by the company.",
+                    )
+
+            # Reset search_path to public for safety (though session usually ends)
+            db.execute(text("SET search_path TO public"))
 
     # If Company, check if approved by Admin
     if user.role == UserRole.company:
@@ -308,9 +320,15 @@ def logout_user(db: Session, user_id: int) -> MessageResponse:
 # ============================================
 
 
+# =========================================================================
+# SAAS COMPANY REGISTRATION (Tenant Creation)
+# =========================================================================
 def register_company(db: Session, data: CompanyRegisterRequest) -> MessageResponse:
     """
-    Register a new company. Creates tenant schema for multi-tenant isolation.
+    1. VALIDATION: Ensure email is unique in the entire SaaS platform.
+    2. SCHEMA GENERATION: Create a unique 'schema_name' based on the company name.
+    3. INFRASTRUCTURE: Physically create the isolated PostgreSQL schema for this tenant.
+    4. USER PROVISIONING: Create the first 'Company Admin' user.
     """
     data.company_email = data.company_email.lower().strip()
 
@@ -328,12 +346,14 @@ def register_company(db: Session, data: CompanyRegisterRequest) -> MessageRespon
             detail="A user with this email already exists",
         )
 
+    # Convert "Apple Inc" to "company_apple_inc"
     schema_name = "company_" + re.sub(
         r"[^a-z0-9]+", "_", data.company_name.lower()
     ).strip("_")
     hashed = hash_password(data.password)
 
     try:
+        # STEP 1: Save metadata to 'public.companies'
         repo.create_company(
             db=db,
             company_name=data.company_name,
@@ -341,6 +361,7 @@ def register_company(db: Session, data: CompanyRegisterRequest) -> MessageRespon
             schema_name=schema_name,
         )
 
+        # STEP 2: Create the user in 'public.users'
         repo.create_user(
             db=db,
             email=data.company_email,
@@ -349,19 +370,8 @@ def register_company(db: Session, data: CompanyRegisterRequest) -> MessageRespon
             schema_name=schema_name,
         )
 
+        # STEP 3: Create the real SQL Schema database (DDL)
         create_tenant_schema(db, schema_name)
-        
-        # Switch to the new schema and create tenant tables properly
-        from app.database import engine
-        from app.tenant.models import TenantBase
-        from app.analytics.models import RawUpload
-        from app.auth.tenant_models import HRAccount # Added
-        from sqlalchemy import text
-        
-        with engine.connect() as connection:
-            connection.execute(text(f"SET search_path TO {schema_name}"))
-            TenantBase.metadata.create_all(bind=connection)
-            connection.commit()
 
         db.commit()
         return MessageResponse(
@@ -370,6 +380,7 @@ def register_company(db: Session, data: CompanyRegisterRequest) -> MessageRespon
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+
 
 def forgot_password(db: Session, data: ForgotPasswordRequest) -> MessageResponse:
 
@@ -390,6 +401,7 @@ def forgot_password(db: Session, data: ForgotPasswordRequest) -> MessageResponse
 
     return MessageResponse(message="Password reset link sent.")
 
+
 def reset_password(db: Session, data: ResetPasswordRequest) -> MessageResponse:
 
     payload = decode_token(data.token)
@@ -408,17 +420,13 @@ def reset_password(db: Session, data: ResetPasswordRequest) -> MessageResponse:
 
     return MessageResponse(message="Password reset successful")
 
+
 def change_password(
-    db: Session,
-    user: User,
-    data: ChangePasswordRequest
+    db: Session, user: User, data: ChangePasswordRequest
 ) -> MessageResponse:
 
     if not verify_password(data.current_password, user.password_hash):
-        raise HTTPException(
-            status_code=400,
-            detail="Current password incorrect"
-        )
+        raise HTTPException(status_code=400, detail="Current password incorrect")
 
     user.password_hash = hash_password(data.new_password)
 

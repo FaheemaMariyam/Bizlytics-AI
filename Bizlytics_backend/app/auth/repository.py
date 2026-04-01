@@ -5,8 +5,8 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.auth.models import (Company, CompanyStatus, HRAccount, RefreshToken,
-                             User, UserRole)
+from app.auth.models import Company, CompanyStatus, RefreshToken, User, UserRole
+from app.auth.tenant_models import HRAccount, HRStatus
 
 # ============================================
 # Company Operations
@@ -58,10 +58,8 @@ def create_user(
 # ============================================
 
 
-def create_hr_account(
-    db: Session, company_id: int, email: str, password_hash: str
-) -> HRAccount:
-    hr = HRAccount(company_id=company_id, email=email, password_hash=password_hash,)
+def create_hr_account(db: Session, email: str, password_hash: str) -> HRAccount:
+    hr = HRAccount(email=email, password_hash=password_hash, status=HRStatus.pending)
     db.add(hr)
     return hr
 

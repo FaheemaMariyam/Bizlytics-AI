@@ -23,3 +23,6 @@ SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
 SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "Bizlytics")
 FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+# google api key
+GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")

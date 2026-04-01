@@ -5,6 +5,7 @@ import FileUpload from '../components/analytics/FileUpload';
 import FileList from '../components/analytics/FileList';
 import useAuth from '../hooks/useAuth';
 import ChangePasswordForm from '../components/auth/ChangePasswordForm';
+import AIChat from '../components/AI/AIChat';
 
 const HRDashboard = () => {
     const { user } = useAuth();
@@ -53,6 +54,9 @@ const HRDashboard = () => {
                     </div>
                 </div>
             </div>
+            
+            {/* AI Insights Chat */}
+            <AIChat />
         </DashboardLayout>
     );
 };

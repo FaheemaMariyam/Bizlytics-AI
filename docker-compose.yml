@@ -1,0 +1,104 @@
+
+services:
+
+    # Nginx Gateway (The Front Door)
+  nginx:
+    image: nginx:alpine
+    container_name: bizlytics_nginx
+    ports:
+      - "8080:80"                      # Public port 8080 (Mapped to 80 inside container)
+
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro  # Mount the config file
+    depends_on:
+      - backend
+      - flower
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bizlytics_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: bizlytics
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis (for Celery message broker)
+  redis:
+    image: redis:7-alpine
+    container_name: bizlytics_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build: ./Bizlytics_backend
+    container_name: bizlytics_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./Bizlytics_backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:root@postgres:5432/bizlytics
+      - CELERY_BROKER_URL=redis://redis:6379/0   #redis broker for Celery
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./Bizlytics_backend:/app        # Live code reload
+      - ./Bizlytics_backend/data:/app/data           # Persist DuckDB data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Celery Worker (same code, different start command)  
+  celery_worker:
+    build: ./Bizlytics_backend
+    container_name: bizlytics_celery
+    command: celery -A worker.celery_app worker --loglevel=info --concurrency=1
+    env_file:
+      - ./Bizlytics_backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:root@postgres:5432/bizlytics
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./Bizlytics_backend:/app
+      - ./Bizlytics_backend/data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Flower (Celery monitoring dashboard) - useful for monitoring tasks
+  flower:
+    build: ./Bizlytics_backend
+    container_name: bizlytics_flower
+    command: celery -A worker.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=postgresql://postgres:root@postgres:5432/bizlytics
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+  duckdb_data:
