@@ -90,10 +90,18 @@ const AIChat = () => {
 
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
+      const isRateLimit = error.response?.status === 429 || 
+                         error.response?.data?.detail?.toLowerCase().includes('quota') ||
+                         error.message?.toLowerCase().includes('429');
+      
+      const errorText = isRateLimit 
+        ? "AI Quota reached. Please try again in a few minutes or upgrade your plan." 
+        : "I'm sorry, I encountered an error. Please try again later.";
+
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         type: 'ai',
-        text: "I'm sorry, I encountered an error. Please try again later.",
+        text: errorText,
         isError: true
       }]);
     } finally {

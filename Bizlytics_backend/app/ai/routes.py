@@ -53,5 +53,14 @@ async def chat_with_ai(
         return ChatResponse(reply=ai_response)
 
     except Exception as e:
+        err_msg = str(e).lower()
         logger.error(f"AI Chat Error: {e}")
+        
+        # Check for rate limit or quota issues
+        if "rate limit" in err_msg or "quota" in err_msg or "429" in err_msg:
+            raise HTTPException(
+                status_code=429, 
+                detail="AI service quota reached. Please wait a few minutes before trying again."
+            )
+            
         raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
