@@ -131,54 +131,64 @@ const handleGenerateDashboard = async (localData = null) => {
 };
 
   return (
-    <div className="ai-chat-panel border-l border-gray-200 bg-white flex flex-col w-[380px] shrink-0 h-full relative shadow-[-4px_0_12px_rgba(0,0,0,0.02)]">
-      <div className="ai-chat-header px-4 h-12 flex items-center justify-between border-b border-gray-100 bg-[#fafafa]">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-600 flex items-center gap-2">
-          <Bot size={16} /> AI Assistant
-        </h3>
-        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-100 uppercase tracking-tighter">Connected</span>
-      </div>
+    <div className="ai-chat-panel bg-white flex flex-col w-full h-full relative">
 
       <div className="ai-chat-history" ref={scrollRef}>
         {messages.map((msg) => (
-          <div key={msg.id} className={`ai-message ${msg.type}`}>
-            <div className="ai-message-content">
-              {msg.type === 'ai' ? (
-                <div className="markdown-content">
-                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.text}
-                   </ReactMarkdown>
+          <div key={msg.id} className={`ai-message-wrapper ${msg.type}`}>
+            <div className={`max-w-4xl w-full flex gap-6 ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'} mx-auto px-6`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm border ${msg.type === 'ai' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white border-gray-200 text-gray-400'}`}>
+                {msg.type === 'ai' ? <Bot size={20} /> : <User size={20} />}
+              </div>
+              <div className={`flex flex-col gap-3 flex-1 ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className={`ai-message ${msg.type}`}>
+                  <div className="ai-message-content">
+                    {msg.type === 'ai' ? (
+                      <div className="markdown-content">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <span className="text-base font-medium text-slate-700">{msg.text}</span>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                msg.text
-              )}
-              {(msg.dashboard || /\[SUGGEST_DASHBOARD\]|<SUGGEST_DASHBOARD>/i.test(msg.text)) && (
-                <button 
-                  className="mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500"
-                  onClick={() => handleGenerateDashboard(msg.dashboard)}
-                >
-                  <BarChart2 size={18} className="animate-pulse" /> ✨ {msg.dashboard ? `View Proposed ${msg.dashboard.title || 'Dashboard'}` : "Generate Visual Dashboard"}
-                </button>
-              )}
-              {msg.charts && msg.charts.map((chart, idx) => (
-                <button 
-                    key={idx}
-                    className="ai-chart-placeholder-btn"
-                    onClick={() => {
-                        setDashboardData(chart.data || chart);
-                        setBiReports([]);
-                        setIsFullDashboard(false);
-                        setShowDashboard(true);
-                    }}
-                >
-                  <BarChart2 size={16} /> View {chart.title || `Chart ${idx + 1}`}
-                </button>
-              ))}
-              {msg.file && (
-                <div className="ai-attachment-preview mt-2">
-                  <Paperclip size={14} /> {msg.file}
-                </div>
-              )}
+
+                {/* Integrated Action Buttons */}
+                {(msg.dashboard || /\[SUGGEST_DASHBOARD\]|<SUGGEST_DASHBOARD>/i.test(msg.text)) && (
+                  <button 
+                    className="mt-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-black hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-100 transition-all flex items-center gap-2 group"
+                    onClick={() => handleGenerateDashboard(msg.dashboard)}
+                  >
+                    <BarChart2 size={18} className="group-hover:scale-110 transition-transform" /> 
+                    <span>{msg.dashboard ? `Generate ${msg.dashboard.title || 'Dynamic Analysis'}` : "Build Technical Dashboard"}</span>
+                  </button>
+                )}
+                {msg.charts && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {msg.charts.map((chart, idx) => (
+                      <button 
+                          key={idx}
+                          className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm"
+                          onClick={() => {
+                              setDashboardData(chart.data || chart);
+                              setBiReports([]);
+                              setIsFullDashboard(false);
+                              setShowDashboard(true);
+                          }}
+                      >
+                        📊 View {chart.title || `Chart ${idx + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {msg.file && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold text-gray-400 mt-2">
+                    <Paperclip size={12} /> {msg.file}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -224,8 +234,8 @@ const handleGenerateDashboard = async (localData = null) => {
         </div>
       </div>
       {showDashboard && dashboardData && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 relative">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[2000] flex items-center justify-center p-4 md:p-10">
+          <div className="bg-white rounded-3xl w-full h-full max-h-[95vh] overflow-y-auto p-6 md:p-12 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <button 
               className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition"
               onClick={() => setShowDashboard(false)}
