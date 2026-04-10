@@ -11,7 +11,7 @@ const ACCEPTED_TYPES = {
     'application/json': '.json',
 };
 
-const FileUpload = ({ onUploadSuccess }) => {
+const FileUpload = ({ onUploadSuccess, variant = 'default' }) => {
     const [dragActive, setDragActive] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -20,30 +20,22 @@ const FileUpload = ({ onUploadSuccess }) => {
     const handleDrag = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (e.type === 'dragenter' || e.type === 'dragover') {
-            setDragActive(true);
-        } else if (e.type === 'dragleave') {
-            setDragActive(false);
-        }
+        if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+        else if (e.type === 'dragleave') setDragActive(false);
     };
 
     const validateFile = (file) => {
         const ext = file.name.split('.').pop().toLowerCase();
         const allowed = ['csv', 'xlsx', 'xls', 'json'];
         if (!allowed.includes(ext)) {
-            toast.error(`Unsupported file type: .${ext}. Allowed: .csv, .xlsx, .json`);
-            return false;
-        }
-        if (file.size > 50 * 1024 * 1024) {
-            toast.error('File too large. Maximum size is 50MB.');
+            toast.error(`Unsupported file type: .${ext}`);
             return false;
         }
         return true;
     };
 
     const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         setDragActive(false);
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const file = e.dataTransfer.files[0];
@@ -63,27 +55,41 @@ const FileUpload = ({ onUploadSuccess }) => {
         setUploading(true);
         try {
             const result = await analyticsService.uploadFile(selectedFile);
-            toast.success(result.message || 'File uploaded successfully!');
+            toast.success(result.message || 'Asset added!');
             setSelectedFile(null);
             if (onUploadSuccess) onUploadSuccess();
         } catch (error) {
-            const detail = error.response?.data?.detail;
-            toast.error(detail || 'Failed to upload file');
+            toast.error('Upload failed');
         } finally {
             setUploading(false);
         }
     };
 
-    const clearFile = () => {
-        setSelectedFile(null);
-        if (inputRef.current) inputRef.current.value = '';
-    };
-
-    const formatSize = (bytes) => {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    };
+    if (variant === 'compact') {
+        return (
+            <div className="flex items-center gap-2">
+                <input ref={inputRef} type="file" className="hidden" onChange={handleFileSelect} accept=".csv,.xlsx,.xls,.json" />
+                
+                {selectedFile ? (
+                    <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-lg animate-in fade-in slide-in-from-right-2">
+                        <span className="text-[10px] font-bold text-indigo-700 truncate max-w-[120px]">{selectedFile.name}</span>
+                        <Button onClick={handleUpload} isLoading={uploading} className="h-6 px-2 text-[9px] font-bold uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700">
+                            Push
+                        </Button>
+                        <button onClick={() => setSelectedFile(null)} className="text-indigo-400 hover:text-indigo-600"><X size={14} /></button>
+                    </div>
+                ) : (
+                    <button 
+                        onClick={() => inputRef.current?.click()}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm hover:shadow-indigo-500/20"
+                    >
+                        <Upload size={14} />
+                        <span className="text-[11px] font-bold uppercase tracking-widest">New Asset</span>
+                    </button>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -130,7 +136,7 @@ const FileUpload = ({ onUploadSuccess }) => {
                         <FileSpreadsheet className="h-5 w-5 text-indigo-600" />
                         <div>
                             <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                            <p className="text-xs text-gray-500">{formatSize(selectedFile.size)}</p>
+                            <p className="text-xs text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -142,7 +148,7 @@ const FileUpload = ({ onUploadSuccess }) => {
                             Upload
                         </Button>
                         <button
-                            onClick={(e) => { e.stopPropagation(); clearFile(); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
                             className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                         >
                             <X className="h-4 w-4" />

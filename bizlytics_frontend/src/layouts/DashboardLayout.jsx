@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import Button from '../components/common/Button';
+import FileList from '../components/analytics/FileList';
+import AIChat from '../components/AI/AIChat';
 
 const DashboardLayout = ({ children }) => {
     const { user, logout } = useAuth();
@@ -21,33 +23,44 @@ const DashboardLayout = ({ children }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Navbar */}
-            <nav className="bg-white shadow-sm border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <span className="text-xl font-bold text-indigo-600 tracking-tight">
-                                ✦ Bizlytics
-                            </span>
-                            <span className={`ml-4 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest ${roleBadgeColors[user.role] || 'bg-gray-100 text-gray-800'}`}>
-                                {user.role}
-                            </span>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <span className="text-gray-500 text-sm hidden sm:block">{user.email}</span>
-                            <Button onClick={handleLogout} variant="outline" className="w-auto py-1.5 px-4 text-sm">
-                                Logout
-                            </Button>
-                        </div>
-                    </div>
+        <div className="flex flex-col h-screen bg-[#fcfcfc] overflow-hidden text-[#1a1a1a]">
+            {/* Top Minimalist Header */}
+            <header className="h-12 border-b border-gray-200 bg-white flex items-center justify-between px-4 shrink-0 transition-all duration-300">
+                <div className="flex items-center gap-6">
+                    <span className="text-sm font-bold text-indigo-600 tracking-tight flex items-center gap-2">
+                        <span className="w-6 h-6 bg-indigo-600 rounded-md flex items-center justify-center text-white text-[10px]">B</span>
+                        BIZLYTICS <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 uppercase tracking-widest">{user.role}</span>
+                    </span>
                 </div>
-            </nav>
 
-            {/* Main Content */}
-            <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {children}
-            </main>
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-end mr-2">
+                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-tighter">Current User</span>
+                        <span className="text-xs font-medium text-gray-700">{user.email}</span>
+                    </div>
+                    <Button onClick={handleLogout} variant="outline" className="h-8 px-3 text-[11px] font-bold uppercase tracking-wider border-gray-200 hover:border-red-200 hover:text-red-600 hover:bg-red-50">
+                        Logout
+                    </Button>
+                </div>
+            </header>
+
+            {/* Workbench Body */}
+            <div className="flex flex-1 overflow-hidden relative">
+                {/* Left Sidebar (Explorer) */}
+                <aside className="w-64 border-r border-gray-200 bg-white shrink-0 hidden md:flex flex-col">
+                    <FileList />
+                </aside>
+
+                {/* Main Workspace (Editor) */}
+                <main className="flex-1 overflow-y-auto bg-gray-50/50 scrollbar-thin relative pt-4 pb-12 px-6">
+                    {children}
+                </main>
+
+                {/* Right Sidebar (AI Panel) */}
+                <aside className="w-[380px] shrink-0 hidden lg:block">
+                    <AIChat />
+                </aside>
+            </div>
         </div>
     );
 };
