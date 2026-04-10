@@ -26,3 +26,6 @@ FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # google api key
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+
+# groq api key
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")

@@ -10,6 +10,7 @@ from app.auth.models import Company, User
 from app.database import get_db
 from storage.s3_service import upload_file_to_s3
 from worker.etl_tasks import process_etl
+from app.analytics.duckdb_manager import get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -74,3 +75,28 @@ def list_company_files(
         }
         for f in files
     ]
+
+@router.get("/dashboard-summary")
+def get_dashboard_summary(db: Session = Depends(get_db), current_user: User = Depends(require_hr)):
+    # 1. Resolve numeric company ID from schema_name
+    company = db.query(Company).filter(Company.schema_name == current_user.schema_name).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    company_id = company.id
+    with get_connection(company_id, read_only=True) as con:
+        # 2. Fetch aggregations and map them to label/value for Recharts
+        aggs = con.execute("SELECT column_name as label, total, average, maximum FROM aggregations").df()
+        
+        # 2. Fetch Executive BI Reports (Trends, Categories)
+        bi_reports = []
+        try:
+            bi_reports = con.execute("SELECT type, label, value FROM bi_reports").df().to_dict(orient="records")
+        except:
+            pass
+        
+        return {
+            "summary": aggs.to_dict(orient="records"),
+            "bi_reports": bi_reports,
+            "status": "success"
+        }

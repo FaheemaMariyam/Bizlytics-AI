@@ -46,31 +46,45 @@ def get_company_schema_info(company_id: int) -> str:
         return f"Error retrieving data schema: {str(e)}"
 
 
-# Executes safe, read-only SQL on the company's data. This is the core function that allows the AI to query the data without risking security or data integrity.
 def run_analytics_query(company_id: int, sql_query: str) -> List[Dict[str, Any]]:
     """
     Executes a read-only SQL query on the company's private DuckDB file.
+    Returns truncated results for efficiency.
     """
     # 1. Basic Security: Only allow SELECT
-    if not sql_query.strip().lower().startswith("select"):
+    sql_clean = sql_query.strip().lower()
+    if not sql_clean.startswith("select"):
         return [{"error": "Only SELECT queries are allowed for safety."}]
 
     # 2. Compatibility Layer: If the AI uses the old table naming convention, fix it.
-    # Old: company_5_data -> New: raw_data
-    # Old: company_5_profile -> New: profile
     sql_query = re.sub(
         rf"company_{company_id}_data", "raw_data", sql_query, flags=re.IGNORECASE
     )
-    sql_query = re.sub(
-        rf"company_{company_id}_profile", "profile", sql_query, flags=re.IGNORECASE
-    )
 
     try:
-        # NEW: Open the company-specific database file
         with get_connection(company_id, read_only=True) as con:
-            result = con.execute(sql_query).df()
-            return result.to_dict(orient="records")
+            # 3. Efficiency: Limit raw queries that don't have a limit already
+            if "limit" not in sql_clean:
+                sql_query = f"{sql_query} LIMIT 50"
+            
+            result_df = con.execute(sql_query).df()
+            
+            # 4. Truncation for LLM context (Only send first 20 records to the AI)
+            total_count = len(result_df)
+            truncated_df = result_df.head(20)
+            
+            # Use a structure that explicitly tells the AI about the total count
+            return {
+                "total_count": total_count,
+                "sample_data": truncated_df.to_dict(orient="records"),
+                "is_truncated": total_count > 20
+            }
 
     except Exception as e:
+        error_msg = str(e)
+        # 5. Correctness Help: If column not found, prompt AI to check schema
+        if "not found" in error_msg.lower() or "binder" in error_msg.lower():
+            return [{"error": f"SQL Error: {error_msg}. NOTE: Ensure all column names are lowercase with underscores as per the schema."}]
+        
         logger.error(f"DuckDB Query Error for company {company_id}: {e}")
-        return [{"error": f"SQL Execution failed: {str(e)}"}]
+        return [{"error": f"Execution failed: {error_msg}"}]

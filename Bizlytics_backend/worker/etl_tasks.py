@@ -72,7 +72,7 @@ def process_etl(self, upload_id: int, company_id: int):
 
         # 7. AGGREGATION: Pre-calculate analytical metrics for the frontend
         logger.info(f"Running aggregations for company {company_id}")
-        run_aggregations(company_id)
+        run_aggregations(company_id, mapping)
 
         # 8. FINALIZE
         upload.status = UploadStatus.completed

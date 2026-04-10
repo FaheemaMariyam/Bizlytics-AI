@@ -52,14 +52,16 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Convert empty strings to NaN
     df.replace("", pd.NA, inplace=True)
 
-    # Remove empty rows
-    df = df.dropna(how="all")
-
-    # Remove empty columns
-    df = df.dropna(axis=1, how="all")
+    # Remove empty rows/columns
+    df = df.dropna(how="all").dropna(axis=1, how="all")
 
     # Remove duplicates
     df = df.drop_duplicates().reset_index(drop=True)
+
+    # REMOVE INDEX COLUMNS (e.g., 'unnamed: 0')
+    unnamed_cols = [c for c in df.columns if "unnamed" in c.lower()]
+    if unnamed_cols:
+        df = df.drop(columns=unnamed_cols)
 
     #  Prevent DuckDB ConversionException on mixed-type columns.
     # If a column has mostly numbers but some strings ('No'), DuckDB might incorrectly guess 'DOUBLE'.
