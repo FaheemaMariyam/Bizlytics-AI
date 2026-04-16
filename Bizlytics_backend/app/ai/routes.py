@@ -18,8 +18,12 @@ class ChatRequest(BaseModel):
     message: str
 
 
+import json
+import re
+
 class ChatResponse(BaseModel):
     reply: str
+    dashboard: dict | None = None
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -50,7 +54,17 @@ async def chat_with_ai(
 
         # 4. Extract the final AI response
         ai_response = result["messages"][-1].content
-        return ChatResponse(reply=ai_response)
+        
+        # 5. Extract Dashboard JSON if present
+        dashboard_data = None
+        match = re.search(r"```(?:dashboard|json)\s*([\s\S]*?)```", ai_response)
+        if match:
+            try:
+                dashboard_data = json.loads(match.group(1).strip())
+            except Exception as je:
+                logger.warning(f"Failed to parse dashboard JSON: {je}")
+
+        return ChatResponse(reply=ai_response, dashboard=dashboard_data)
 
     except Exception as e:
         err_msg = str(e).lower()

@@ -5,7 +5,7 @@ import time
 
 from sqlalchemy import text
 
-from app.analytics.duckdb_manager import load_dataframe
+from app.analytics.duckdb_manager import load_dataframe, swap_tables
 from app.analytics.models import RawUpload, UploadStatus
 from app.analytics.service import _parse_to_dataframe, clean_dataframe
 from app.auth.models import Company
@@ -65,16 +65,29 @@ def process_etl(self, upload_id: int, company_id: int):
         upload.column_mapping = json.dumps(mapping)
         db.commit()
 
-        # 6. STORAGE: Load cleaned data into isolated DuckDB table
-        # Note: We use the numeric company_id for the DuckDB filename for stability.
-        logger.info(f"Loading {len(df_clean)} rows into DuckDB")
-        load_dataframe(company_id, df_clean)
+        # 6. STORAGE: Load cleaned data into isolated DuckDB table (STAGE 1: Temporary)
+        # We load into 'temp_raw_data' to keep 'raw_data' intact until everything is ready.
+        logger.info(f"Loading {len(df_clean)} rows into DuckDB [TEMPORARY]")
+        load_dataframe(company_id, df_clean, table_name="temp_raw_data")
 
-        # 7. AGGREGATION: Pre-calculate analytical metrics for the frontend
-        logger.info(f"Running aggregations for company {company_id}")
-        run_aggregations(company_id, mapping)
+        # 7. AGGREGATION: Pre-calculate metrics (STAGE 2: Temporary)
+        logger.info(f"Running aggregations for company {company_id} [TEMPORARY]")
+        success = run_aggregations(company_id, mapping, upload_id=upload_id, is_temporary=True)
 
-        # 8. FINALIZE
+        if not success:
+            raise RuntimeError("Aggregation failed during temporary processing. Swapping aborted.")
+
+        # 8. TRANSACTIONAL SWAP (STAGE 3: Atomic Commit)
+        # Now that both Raw Data and Summaries are valid, swap them into production names.
+        logger.info(f"Performing atomic swap for company {company_id}")
+        swap_tables(company_id, {
+            "temp_raw_data": "raw_data",
+            "temp_bi_reports": "bi_reports",
+            "temp_aggregations": "aggregations",
+            "temp_profile": "profile"
+        })
+
+        # 9. FINALIZE
         upload.status = UploadStatus.completed
         upload.row_count = len(df_clean)
         db.commit()

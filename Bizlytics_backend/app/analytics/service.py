@@ -21,19 +21,34 @@ def _parse_to_dataframe(content: bytes, file_type: FileType) -> pd.DataFrame:
     if file_type == FileType.csv:
         return pd.read_csv(buf, encoding="utf-8", on_bad_lines="skip")
     elif file_type == FileType.xlsx:
-        # Load without header first to find the real start of the table
-        df_temp = pd.read_excel(buf, header=None, engine="openpyxl")
+        # 1. Inspect Sheet Names (Handle multi-sheet Excel like Superstore)
+        xl = pd.ExcelFile(buf, engine="openpyxl")
+        sheet_name = xl.sheet_names[0]  # Default to first
+        
+        # Priority sheets for common analytics datasets
+        priority_sheets = ["orders", "data", "sales", "sheet1"]
+        for priority in priority_sheets:
+            match = [s for s in xl.sheet_names if priority in s.lower()]
+            if match:
+                sheet_name = match[0]
+                break
+        
+        logger.info(f"Loading Excel sheet: {sheet_name}")
 
-        # Find the first row that has at least 3 non-null values (typical for a table)
+        # 2. Detect Header Row (Skip noise/metadata rows at the top)
+        # Load first few rows without header to find the table start
+        df_temp = pd.read_excel(buf, sheet_name=sheet_name, header=None, nrows=20, engine="openpyxl")
+        
         header_idx = 0
         for i, row in df_temp.iterrows():
+            # A valid header row usually has many non-null values
             if row.count() >= 3:
                 header_idx = i
                 break
 
-        # Reload with the detected header row
+        # 3. Reload with detected sheet and header
         buf.seek(0)
-        return pd.read_excel(buf, header=header_idx, engine="openpyxl")
+        return pd.read_excel(buf, sheet_name=sheet_name, header=header_idx, engine="openpyxl")
 
     elif file_type == FileType.json:
         return pd.read_json(buf)

@@ -23,7 +23,7 @@ def create_tools_for_company(company_id: int):
         return json.dumps(results, default=str)
 
     @tool
-    def get_schema() -> str:
+    def get_schema(dummy: str = "ignore") -> str:
         """
         Get the table schema (column names and types) for the company's data.
         Always call this FIRST before writing any SQL query so you know what columns exist.

@@ -9,23 +9,14 @@ const Login = () => {
       title="Sign in to your account" 
       subtitle={
         <span>
-          Or{' '}
-          <Link to="/register/company" className="font-medium text-indigo-600 hover:text-indigo-500">
-            register a new company
+          Don't have an account?{' '}
+          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Create an account
           </Link>
         </span>
       }
     >
       <LoginForm />
-      
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500">
-          Are you an HR employee?{' '}
-          <Link to="/register/hr" className="font-medium text-indigo-600 hover:text-indigo-500">
-            Register here
-          </Link>
-        </p>
-      </div>
     </AuthLayout>
   );
 };

@@ -96,22 +96,22 @@ const LoginForm = () => {
             id="remember-me"
             name="remember-me"
             type="checkbox"
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            className="h-4 w-4 text-violet-600 focus:ring-violet-500 bg-white/5 border-white/10 rounded"
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+          <label htmlFor="remember-me" className="ml-2.5 block text-[11px] font-bold text-gray-500 uppercase tracking-widest">
             Remember me
           </label>
         </div>
 
-        <div className="text-sm">
-          <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <div className="text-xs">
+          <Link to="/forgot-password" className="font-bold text-violet-400 hover:text-violet-300 transition-colors">
             Forgot password?
           </Link>
         </div>
       </div>
 
-      <Button type="submit" isLoading={loading}>
-        Sign in
+      <Button type="submit" variant="gradient" isLoading={loading}>
+        Sign in to Workspace
       </Button>
     </form>
   );

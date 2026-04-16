@@ -57,82 +57,107 @@ const AdminDashboard = () => {
 
     return (
         <DashboardLayout>
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-gray-500 mt-1">Manage company registrations and platform settings.</p>
+            <div className="mb-10">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-violet-500 mb-2">
+                    <Building2 size={12} /> Platform Governance
+                </div>
+                <h1 className="text-3xl font-black text-white tracking-tight">Admin Control Center</h1>
+                <p className="text-gray-500 font-bold text-xs mt-2 flex items-center gap-2">
+                    Global oversight of company registrations and platform security.
+                </p>
             </div>
 
-            <div className="space-y-8">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Pending Companies */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-indigo-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Pending Company Registrations</h2>
-                        {pendingCompanies.length > 0 && (
-                            <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                {pendingCompanies.length}
-                            </span>
+                <div className="xl:col-span-2 relative group">
+                    <div className="absolute -inset-px bg-gradient-to-r from-violet-500/20 to-cyan-500/20 rounded-3xl opacity-50 blur-[2px] shadow-2xl" />
+                    <div className="relative bg-[#12121a] border border-white/[0.08] rounded-3xl overflow-hidden shadow-2xl h-full">
+                        <div className="px-8 py-6 border-b border-white/[0.05] flex items-center justify-between bg-white/[0.02]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-violet-600/10 rounded-xl text-violet-400 border border-violet-500/20">
+                                    <Building2 size={20} />
+                                </div>
+                                <h2 className="text-sm font-black uppercase tracking-widest text-white">Pending Registrations</h2>
+                                {pendingCompanies.length > 0 && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                                        {pendingCompanies.length}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {loading ? (
+                            <div className="p-20 text-center text-gray-600">
+                                <Clock className="h-10 w-10 mx-auto mb-4 animate-spin text-violet-500/40" />
+                                <p className="text-xs font-bold uppercase tracking-widest">Accessing global registry...</p>
+                            </div>
+                        ) : pendingCompanies.length === 0 ? (
+                            <div className="p-20 text-center">
+                                <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                                    <CheckCircle className="h-10 w-10 text-emerald-400" />
+                                </div>
+                                <p className="text-lg font-black text-white">Registry Synchronized</p>
+                                <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">All company applications processed</p>
+                            </div>
+                        ) : (
+                            <div className="p-4">
+                                <div className="space-y-3">
+                                    {pendingCompanies.map((company) => (
+                                        <div key={company.id} className="p-5 bg-white/[0.02] border border-white/[0.05] rounded-2xl flex items-center justify-between hover:bg-white/[0.04] hover:scale-[1.01] transition-all group/item">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600/20 to-cyan-600/20 flex items-center justify-center text-white border border-white/10">
+                                                    {company.company_name[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-white">{company.company_name}</p>
+                                                    <p className="text-xs text-gray-500 font-medium">{company.company_email}</p>
+                                                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+                                                        Registered {new Date(company.created_at).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => handleApprove(company.id)}
+                                                    disabled={actionLoading === company.id}
+                                                    className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50"
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(company.id)}
+                                                    disabled={actionLoading === company.id}
+                                                    className="px-5 py-2.5 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-white hover:bg-red-500/10 hover:border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
-
-                    {loading ? (
-                        <div className="p-8 text-center text-gray-400">
-                            <Clock className="h-8 w-8 mx-auto mb-2 animate-pulse" />
-                            <p className="text-sm">Loading...</p>
-                        </div>
-                    ) : pendingCompanies.length === 0 ? (
-                        <div className="p-8 text-center">
-                            <CheckCircle className="h-12 w-12 mx-auto text-green-300 mb-3" />
-                            <p className="text-sm text-gray-500">No pending companies to review.</p>
-                            <p className="text-xs text-gray-400 mt-1">All registrations have been processed.</p>
-                        </div>
-                    ) : (
-                        <ul className="divide-y divide-gray-100">
-                            {pendingCompanies.map((company) => (
-                                <li key={company.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900">{company.company_name}</p>
-                                        <p className="text-sm text-gray-500">{company.company_email}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">
-                                            Registered {new Date(company.created_at).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            onClick={() => handleApprove(company.id)}
-                                            isLoading={actionLoading === company.id}
-                                            className="w-auto py-1.5 px-4 text-xs bg-green-600 hover:bg-green-700 focus:ring-green-500"
-                                        >
-                                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                                            Approve
-                                        </Button>
-                                        <Button
-                                            onClick={() => handleReject(company.id)}
-                                            isLoading={actionLoading === company.id}
-                                            variant="outline"
-                                            className="w-auto py-1.5 px-4 text-xs text-red-600 border-red-300 hover:bg-red-50"
-                                        >
-                                            <XCircle className="h-3.5 w-3.5 mr-1" />
-                                            Reject
-                                        </Button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
                 </div>
 
                 {/* Security Settings */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-                        <ShieldAlert className="h-5 w-5 text-indigo-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Security Settings</h2>
-                    </div>
-                    <div className="p-6 max-w-md">
-                        <p className="text-sm text-gray-500 mb-6">
-                            Update your admin credentials to keep the platform secure.
+                <div className="relative group">
+                    <div className="absolute -inset-px bg-gradient-to-b from-violet-500/10 to-transparent rounded-3xl pointer-events-none" />
+                    <div className="relative bg-[#12121a] border border-white/[0.08] rounded-3xl p-8 shadow-2xl h-full">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="p-2.5 bg-cyan-600/10 rounded-xl text-cyan-400 border border-cyan-500/20">
+                                <ShieldAlert size={20} />
+                            </div>
+                            <h2 className="text-sm font-black uppercase tracking-widest text-white">System Security</h2>
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-10 leading-relaxed">
+                            Maintain administrative authority by updating credentials regularly.
                         </p>
-                        <ChangePasswordForm />
+                        
+                        <div className="p-1 space-y-6">
+                            <ChangePasswordForm />
+                        </div>
                     </div>
                 </div>
             </div>

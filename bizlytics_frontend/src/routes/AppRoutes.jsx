@@ -5,9 +5,9 @@ import useAuth from '../hooks/useAuth';
 import Loader from '../components/common/Loader';
 
 // Pages
+import Home from '../pages/Home';
 import Login from '../pages/auth/Login';
-import CompanyRegister from '../pages/auth/CompanyRegister';
-import HRRegister from '../pages/auth/HRRegister';
+import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import AdminDashboard from '../pages/AdminDashboard';
@@ -68,10 +68,12 @@ const DashboardRedirect = () => {
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* Public Landing Page */}
+      <Route path="/" element={<Home />} />
+
       {/* Public Auth Routes */}
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
-      <Route path="/register/company" element={<AuthRoute><CompanyRegister /></AuthRoute>} />
-      <Route path="/register/hr" element={<AuthRoute><HRRegister /></AuthRoute>} />
+      <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
       <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
       <Route path="/reset-password" element={<AuthRoute><ResetPassword /></AuthRoute>} />
 
@@ -113,8 +115,8 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Fallback to login */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Fallback to Home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

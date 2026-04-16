@@ -9,7 +9,7 @@ const HRDashboard = () => {
 
     return (
         <DashboardLayout>
-            <div className="h-[calc(100vh-80px)] flex flex-col -mt-4 bg-white/50 rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+            <div className="h-[calc(100vh-80px)] flex flex-col -mt-4 overflow-hidden">
                 <AIChat />
             </div>
         </DashboardLayout>

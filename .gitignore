@@ -160,3 +160,7 @@ Bizlytics_backend/data/
 Bizlytics_backend/data/analytics/
 Bizlytics_backend/storage/temp/
 Bizlytics_backend/nginex/temp/
+
+# Antigravity / AI Agent folders
+scratch/
+brain/

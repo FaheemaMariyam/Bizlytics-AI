@@ -2,12 +2,13 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 const Button = ({ children, isLoading, variant = 'primary', className = '', ...props }) => {
-  const baseStyle = "w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed";
+  const baseStyle = "w-full flex justify-center items-center py-3 px-6 border border-transparent rounded-xl text-sm font-bold tracking-tight focus:outline-none focus:ring-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed";
   
   const variants = {
-    primary: "text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500",
-    secondary: "text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:ring-indigo-500",
-    outline: "text-gray-700 bg-white border-gray-300 hover:bg-gray-50 focus:ring-indigo-500"
+    primary: "text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500/10",
+    gradient: "text-white bg-gradient-to-r from-violet-600 to-cyan-600 hover:shadow-lg hover:shadow-violet-500/20 focus:ring-violet-500/10",
+    secondary: "text-violet-400 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 focus:ring-violet-500/10",
+    outline: "text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 focus:ring-white/5"
   };
 
   return (
@@ -16,7 +17,7 @@ const Button = ({ children, isLoading, variant = 'primary', className = '', ...p
       disabled={isLoading || props.disabled}
       {...props}
     >
-      {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+      {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
       {children}
     </button>
   );

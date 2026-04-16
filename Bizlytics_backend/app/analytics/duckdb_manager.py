@@ -64,20 +64,38 @@ def get_connection(company_id: int, read_only=False, retries=10, delay=0.5):
             raise e
 
 
-def load_dataframe(company_id: int, df):
+def load_dataframe(company_id: int, df, table_name: str = "raw_data"):
     """
     Loads cleaned rows into a company-specific database file.
     """
-    # Simplified table name since it's already in a company-specific file
-    table_name = "raw_data"
-
     # 1. Thread lock for safety inside this container
     with _db_lock:
         # 2. File lock (inside get_connection) for safety across all containers
         with get_connection(company_id, read_only=False) as con:
-            # Drop old table to prevent schema conflicts when uploading a new dataset
+            # Drop old table to prevent schema conflicts
             con.execute(f"DROP TABLE IF EXISTS {table_name}")
             # Create table and insert all data safely
             con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
 
     return len(df)
+
+
+def swap_tables(company_id: int, table_mappings: dict):
+    """
+    Atomically swaps temporary tables to their final names.
+    table_mappings: {"temp_raw_data": "raw_data", "temp_bi_reports": "bi_reports"}
+    """
+    with _db_lock:
+        with get_connection(company_id, read_only=False) as con:
+            # Begin transaction for ACID atomicity
+            con.execute("BEGIN TRANSACTION")
+            try:
+                for temp_name, final_name in table_mappings.items():
+                    con.execute(f"DROP TABLE IF EXISTS {final_name}")
+                    con.execute(f"ALTER TABLE {temp_name} RENAME TO {final_name}")
+                con.execute("COMMIT")
+                logger.info(f"[Company {company_id}] Transactional swap completed for {list(table_mappings.values())}")
+            except Exception as e:
+                con.execute("ROLLBACK")
+                logger.error(f"[Company {company_id}] Transactional swap failed: {e}")
+                raise e
