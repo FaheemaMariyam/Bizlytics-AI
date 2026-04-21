@@ -164,3 +164,6 @@ Bizlytics_backend/nginex/temp/
 # Antigravity / AI Agent folders
 scratch/
 brain/
+
+# Scripts
+scripts/
